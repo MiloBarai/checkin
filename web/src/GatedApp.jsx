@@ -1,0 +1,89 @@
+import { useEffect, useState } from 'react';
+import { Flex, Spinner } from '@chakra-ui/react';
+import { getSession } from './api/apiFetch.js';
+import PinScreen from './components/PinScreen.jsx';
+import ConsentScreen from './components/ConsentScreen.jsx';
+import ConsentDeclineScreen from './components/ConsentDeclineScreen.jsx';
+import AppShell from './components/AppShell.jsx';
+import { hasGdprAccepted } from './storage/gdpr.js';
+
+function resolveGate(unlocked) {
+  if (!unlocked) {
+    return 'pin';
+  }
+  if (!hasGdprAccepted()) {
+    return 'consent';
+  }
+  return 'app';
+}
+
+export default function GatedApp() {
+  const [gate, setGate] = useState('loading');
+  const [showDecline, setShowDecline] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSession()
+      .then(({ unlocked }) => {
+        if (!cancelled) {
+          setGate(resolveGate(unlocked));
+          setShowDecline(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGate('pin');
+          setShowDecline(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleUnlocked() {
+    setGate(resolveGate(true));
+    setShowDecline(false);
+  }
+
+  function handleConsentAccepted() {
+    setGate('app');
+    setShowDecline(false);
+  }
+
+  if (gate === 'loading') {
+    return (
+      <Flex
+        direction="column"
+        minH="100dvh"
+        bg="gray.50"
+        align="center"
+        justify="center"
+      >
+        <Spinner size="lg" color="teal.500" />
+      </Flex>
+    );
+  }
+
+  if (gate === 'pin') {
+    return <PinScreen onUnlocked={handleUnlocked} />;
+  }
+
+  if (gate === 'consent') {
+    if (showDecline) {
+      return (
+        <ConsentDeclineScreen
+          onReviewConsent={() => setShowDecline(false)}
+        />
+      );
+    }
+    return (
+      <ConsentScreen
+        onAccepted={handleConsentAccepted}
+        onDeclined={() => setShowDecline(true)}
+      />
+    );
+  }
+
+  return <AppShell />;
+}

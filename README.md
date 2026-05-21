@@ -49,7 +49,8 @@ Copy `.env.example` to `.env`. PIN slice (#2) requires `CLUB_PIN` and `SESSION_S
 | `COOKIE_SECURE` | Optional | Set `true` to force `Secure` cookies in development |
 | `SPREADSHEET_ID` | Sheets slice (#4) | Google Spreadsheet ID |
 | `GOOGLE_SERVICE_ACCOUNT` | Sheets slice (#4) | Path to service-account JSON file |
-| `GDPR_POLICY_VERSION` | GDPR slice (#3) | Consent version string clients must accept |
+
+GDPR slice (#3) uses client-only `localStorage.gdprAccepted` and a static `/privacy` page — no extra env vars.
 
 ## Repository layout
 
