@@ -97,5 +97,37 @@ export function createMembersRepository(adapter) {
     return rows.find((row) => row.memberId === memberId) ?? null;
   }
 
-  return { matchMembers, createMember, linkMember, listMembers, findMemberById };
+  async function updateMember(patch) {
+    await ensureMembersSheetReady();
+    const existing = await findMemberById(patch.memberId);
+    if (!existing) {
+      throw new MemberNotFoundError();
+    }
+
+    const updated = {
+      memberId: existing.memberId,
+      firstName: patch.firstName ?? existing.firstName,
+      lastName: patch.lastName ?? existing.lastName,
+      optOutRanking: patch.optOutRanking ?? existing.optOutRanking,
+      createdAt: existing.createdAt,
+    };
+
+    await adapter.updateMemberRow(updated);
+
+    return {
+      memberId: updated.memberId,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      optOutRanking: updated.optOutRanking,
+    };
+  }
+
+  return {
+    matchMembers,
+    createMember,
+    linkMember,
+    listMembers,
+    findMemberById,
+    updateMember,
+  };
 }

@@ -29,3 +29,22 @@ export function clearMemberIdentity() {
     localStorage.removeItem(key);
   }
 }
+
+/** @param {{ memberId: string, firstName: string, lastName: string }} sheet */
+export function syncMemberIdentityFromStatus(sheet) {
+  const local = getMemberIdentity();
+  if (!local || local.memberId !== sheet.memberId) {
+    return;
+  }
+  if (
+    local.firstName === sheet.firstName &&
+    local.lastName === sheet.lastName
+  ) {
+    return;
+  }
+  setMemberIdentity({
+    memberId: sheet.memberId,
+    firstName: sheet.firstName,
+    lastName: sheet.lastName,
+  });
+}

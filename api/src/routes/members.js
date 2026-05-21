@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createMembersRepository } from '../members/repository.js';
 import { parseMemberNames } from '../members/validateNames.js';
 import { parseCreateOrLinkBody } from '../members/parseCreateBody.js';
+import { parsePatchMemberBody } from '../members/parsePatchBody.js';
 import { MemberNotFoundError } from '../checkin/errors.js';
 import { SheetsError, sendSheetsError } from '../sheets/errors.js';
 
@@ -16,6 +17,19 @@ export function createMembersRouter(sheetsAdapter) {
     }
     try {
       const result = await members.matchMembers(parsed);
+      return res.status(200).json(result);
+    } catch (err) {
+      return handleMemberRouteError(res, err);
+    }
+  });
+
+  router.patch('/members/me', async (req, res) => {
+    const parsed = parsePatchMemberBody(req.body);
+    if (parsed.error) {
+      return res.status(400).json({ error: parsed.error });
+    }
+    try {
+      const result = await members.updateMember(parsed.patch);
       return res.status(200).json(result);
     } catch (err) {
       return handleMemberRouteError(res, err);

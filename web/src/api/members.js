@@ -31,3 +31,11 @@ export async function linkMember(memberId) {
   });
   return parseJsonResponse(res);
 }
+
+export async function patchMember(body) {
+  const res = await apiFetch('/api/members/me', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return parseJsonResponse(res);
+}

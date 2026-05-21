@@ -44,6 +44,10 @@ _Avoid_: Auto-picking the top match, showing candidates one-at-a-time in v1, imm
 The browser’s stored `memberId`, `firstName`, and `lastName` (three separate `localStorage` keys) for whoever is using the app on this phone; not validated against Sheets on app load in v1.
 _Avoid_: Login session, server-side member session, assuming localStorage implies the row still exists in Sheets, a single JSON blob for member fields
 
+**Switch member on device**:
+Settings control that clears **On-device member identity** after a destructive confirm, then returns to onboarding. Trigger: *Byt person på telefonen*; confirm dialog explains that PIN and **Data processing consent** stay and the next person must onboard or link. **Club unlock** and consent are unchanged (same browser). Does not delete the **Member** row or check-ins in Sheets.
+_Avoid_: Logout, sign out, clearing GDPR or PIN, implying the previous **Member** is removed from the club
+
 **Members sheet**:
 The persistent Google Sheets tab listing every **Member** (one row per `memberId`); if the tab is missing on first registration, the app creates the tab and header row—coaches only need an empty spreadsheet shared with the service account. If the tab exists but row 1 is not the canonical headers, the API refuses read/write until a coach fixes or deletes the tab (no silent header overwrite or column guessing). `createdAt` is set by the server at registration as a wall-clock timestamp in the **Club calendar timezone** (same zone as **Check-in**).
 _Avoid_: Yearly attendance tabs (`checkins_YYYY`), assuming coaches hand-type every column header before first use, renaming headers for readability without updating the app, UTC-only timestamps on member rows
@@ -96,7 +100,8 @@ _Avoid_: Using “Incheckning” as the app title (use for action copy later, e.
 - `POST /api/members/match` body: `{ firstName, lastName }`; response: `{ candidates: [] }` in #4; in #6 **Fuzzy name match** loads **Members sheet** plus current-year **Check-ins sheet** to build ranked **Match candidates** (max 3)
 - **Club unlock** is required before member-facing flows (check-in, leaderboard, settings APIs); it is separate from **Member** identity stored in the browser
 - After **Data processing consent**, the client shows onboarding until **On-device member identity** exists (`memberId`, `firstName`, `lastName` all present), then home; no server round-trip to verify the member row on load (stale ids surface when a member API runs, e.g. check-in)
-- Onboarding is a fourth client gate in `GatedApp` (after PIN and consent, before `AppShell`); not a separate route or overlay on home in v1
+- Onboarding is a fourth client gate in `GatedApp` (after PIN and consent, before member routes); not a separate route or overlay on home in v1
+- Member app routes (slice #7+): behind the same gate stack, `react-router-dom` paths `/` (Hem), `/settings` (Inställningar); shared shell with bottom nav (`RouterLink`, active `aria-current`). `/privacy` stays public outside gates; Topplista adds `/leaderboard` in slice #8 the same way
 - Slice #4 ships `POST /api/members/match` as a stub returning no candidates (`[]`); slice #6 replaces it with fuzzy logic and **Fuzzy match confirm** (“Är det här du?”) — #4 does not show that screen. Onboarding submit runs **match then create** when `candidates` is empty; when non-empty, show **Fuzzy match confirm** then **Member link** (sheet names on device) or `POST /api/members` create with the same trimmed names as the onboarding form (*Ingen av dessa* — unchanged from slice #5)
 - **Member** display name and `memberId` in browser storage are not cleared when **Club unlock** expires or **Club PIN** changes — only the unlock cookie is dropped; the person re-enters **Club PIN** and continues with the same stored identity
 - A **Member** has at most one **Check-in** per calendar day
@@ -104,7 +109,12 @@ _Avoid_: Using “Incheckning” as the app title (use for action copy later, e.
 - Each **Check-in** row stores **Check-in date**, **Check-in display name**, and `memberId`; changing the name in settings (#7) does not rewrite past rows in slice #5
 - Duplicate **Check-in** for the same **Member** on the same **Check-in date** returns HTTP `200` with `status: "already_checked_in"` (not an error status); first check-in that day returns `200` with `status: "checked_in"`
 - `POST /api/checkin` body: `memberId`, `firstName`, `lastName` (for **Check-in display name**); `GET /api/me/status` query `memberId` — both require **Club unlock**, no member session cookie
-- `GET /api/me/status` in slice #5 returns `checkedInToday` and **Year check-in count** (`yearCount`) only (no `rank` until leaderboard slice #8); home loads status on mount to set the check-in button state
+- `GET /api/me/status` in slice #5 returns `checkedInToday` and **Year check-in count** (`yearCount`) only; from settings slice #7 it also returns sheet-backed `firstName`, `lastName`, and `optOutRanking` for the requested `memberId` (same query param as today). Settings (and home on mount, if desired) use this to show **Ranking opt-out** and names after **Member link** on a new phone; home may ignore the extra fields until leaderboard slice #8 adds `rank`
+- Settings slice #7 does not add a separate GET member endpoint — one status read avoids duplicate Sheets lookups
+- `PATCH /api/members/me` (slice #7): body requires `memberId` (no server-side **Member** session; path `/me` means the client-asserted identity, not cookie-derived). Optional `firstName`, `lastName`, `optOutRanking` — any subset; if either name field is sent, both are required and validated like registration. Response returns updated `memberId`, `firstName`, `lastName`, `optOutRanking`. Opt-out toggle may PATCH only `optOutRanking`; name save sends both names
+- After a successful `GET /api/me/status`, if sheet `firstName` / `lastName` differ from **On-device member identity**, the client updates localStorage to match the sheet (silent sync; home greeting stays accurate after **Member link** or another device’s name edit)
+- **Switch member on device** (settings #7): destructive confirm in Swedish, then `clearMemberIdentity` and onboarding gate; PIN and `gdprAccepted` remain
+- Settings UI (slice #7): **Ranking opt-out** toggle PATCHes on change (revert toggle + show error if request fails); name fields use an explicit *Spara* control, enabled only when values differ from the last loaded sheet names; successful name PATCH updates **On-device member identity**. Swedish: opt-out label *Dölj mig från topplistan* with helper *Du syns inte i den offentliga listan. Din egen statistik på hem skärmen påverkas inte.*; **Switch member on device** trigger *Byt person på telefonen* (full meaning in confirm)
 - `memberId` missing on the **Members sheet** → `404` `{ "error": "member_not_found" }` on member APIs (check-in, status); client shows Swedish re-onboard messaging, does not auto-create a **Member** on check-in
 - `POST /api/checkin` verifies the **Member** row exists before appending to the **Check-ins sheet**; body names are not required to match the **Members sheet** in slice #5 (snapshot only)
 - `POST /api/checkin` applies the same trimmed non-empty `firstName` / `lastName` rules as registration (`400` on invalid)
@@ -189,6 +199,30 @@ _Avoid_: Using “Incheckning” as the app title (use for action copy later, e.
 > **Dev:** "Anna taps check-in twice the same day — 409?"
 > **Domain expert:** "No — `200` both times with `already_checked_in` on the second. Home disables the button and shows Redan incheckad; no error toast."
 
+> **Dev:** "Erik linked on a new phone but opted out years ago — settings toggle wrong until he flips it?"
+> **Domain expert:** "No — `GET /api/me/status` returns `optOutRanking` from the **Members sheet**. Settings reads that on open; we don't guess from localStorage."
+
+> **Dev:** "Do we need a separate GET just for settings?"
+> **Domain expert:** "No — extend status in #7. Leaderboard adds `rank` in #8 on the same call."
+
+> **Dev:** "Can she toggle topplista without resubmitting her name?"
+> **Domain expert:** "Yes — PATCH with only `memberId` and `optOutRanking`. Name save sends both names; same validation as onboarding."
+
+> **Dev:** "She linked on a new phone — home still says the typo she typed?"
+> **Domain expert:** "Status returns sheet names; client overwrites localStorage when they differ. Greeting matches the **Members sheet** after the next status load."
+
+> **Dev:** "Ben taps 'someone else' by mistake on Anna's phone — instant onboarding?"
+> **Domain expert:** "No — confirm first after *Byt person på telefonen*. Dialog says PIN and consent stay; he must onboard or link. Sheets row untouched."
+
+> **Dev:** "Is that logout?"
+> **Domain expert:** "No — **Switch member on device**. Only the three member keys clear, not unlock or GDPR."
+
+> **Dev:** "She fixes a typo — PATCH on every keystroke?"
+> **Domain expert:** "No — *Spara* when both names are ready. Opt-out is different: toggle PATCHes immediately; failed request rolls the toggle back."
+
+> **Dev:** "Inställningar — new route or just swap the main card?"
+> **Domain expert:** "`/settings` with the same bottom nav as Hem. Browser back works. Leaderboard gets its own path in #8."
+
 ## Implementation notes (scaffold)
 
 - Monorepo: npm workspaces, packages `api/` and `web/` at repo root
@@ -198,7 +232,7 @@ _Avoid_: Using “Incheckning” as the app title (use for action copy later, e.
 - Add to home screen (slice #9): ship `manifest.webmanifest` + home-screen icon(s) and link from `index.html` (no service worker / offline in v1); README documents iOS/Android “add to home screen” steps for the production URL
 - Tests (scaffold): no automated test suite beyond manual `GET /api/health`; root `npm test` is a no-op until E2E slice
 - Placeholder UI (scaffold): single page, Swedish copy, Chakra mobile layout, stub bottom nav (Hem / Topplista / Inställningar); product heading **Check-in** (loanword)
-- Client routing (slice #3): `react-router-dom`; `/privacy` is a public route outside PIN/consent gates; other paths use the gate stack; stub home includes a footer **Integritet** link to `/privacy` before settings (#7) exists
+- Client routing (slice #3): `react-router-dom`; `/privacy` is a public route outside PIN/consent gates; other paths use the gate stack; **Integritet** link to `/privacy` lives on Inställningar only (consent/decline screens keep their own policy links)
 - Config docs (scaffold): README + `.env.example` list all PRD env vars with purpose; mark which are required per slice (none required for health-only local run except optional `PORT`)
 - Health check: `GET /api/health` → `200` JSON `{ "status": "ok" }`
 - Session cookie signing: env var `SESSION_SECRET` (required from PIN slice #2 onward)

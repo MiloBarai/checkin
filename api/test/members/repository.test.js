@@ -63,6 +63,49 @@ describe('members repository', () => {
     assert.equal(adapter._snapshot().rows.length, 1);
   });
 
+  it('updateMember patches names and optOutRanking in place', async () => {
+    const adapter = createInMemorySheetsAdapter();
+    const repo = createMembersRepository(adapter);
+    const created = await repo.createMember({
+      firstName: 'Anna',
+      lastName: 'Berg',
+    });
+
+    const renamed = await repo.updateMember({
+      memberId: created.memberId,
+      firstName: 'Annika',
+      lastName: 'Bergström',
+    });
+    assert.equal(renamed.firstName, 'Annika');
+    assert.equal(renamed.lastName, 'Bergström');
+    assert.equal(renamed.optOutRanking, false);
+
+    const opted = await repo.updateMember({
+      memberId: created.memberId,
+      optOutRanking: true,
+    });
+    assert.equal(opted.optOutRanking, true);
+    assert.equal(opted.firstName, 'Annika');
+
+    const snap = adapter._snapshot();
+    assert.equal(snap.rows.length, 1);
+    assert.equal(snap.rows[0].memberId, created.memberId);
+    assert.equal(snap.rows[0].optOutRanking, true);
+  });
+
+  it('updateMember throws when member is missing', async () => {
+    const adapter = createInMemorySheetsAdapter();
+    const repo = createMembersRepository(adapter);
+    await assert.rejects(
+      () =>
+        repo.updateMember({
+          memberId: '00000000-0000-4000-8000-000000000000',
+          optOutRanking: true,
+        }),
+      (err) => err instanceof MemberNotFoundError,
+    );
+  });
+
   it('linkMember throws when member is missing', async () => {
     const adapter = createInMemorySheetsAdapter();
     const repo = createMembersRepository(adapter);

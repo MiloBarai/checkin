@@ -4,7 +4,10 @@ import { getSession } from './api/apiFetch.js';
 import PinScreen from './components/PinScreen.jsx';
 import ConsentScreen from './components/ConsentScreen.jsx';
 import ConsentDeclineScreen from './components/ConsentDeclineScreen.jsx';
-import AppShell from './components/AppShell.jsx';
+import { Route, Routes } from 'react-router-dom';
+import MemberAppLayout from './components/MemberAppLayout.jsx';
+import HomePage from './pages/HomePage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 import OnboardingScreen from './components/OnboardingScreen.jsx';
 import AppBrand from './components/AppBrand.jsx';
 import { hasGdprAccepted } from './storage/gdpr.js';
@@ -110,5 +113,16 @@ export default function GatedApp() {
     return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
-  return <AppShell onRequireOnboarding={handleRequireOnboarding} />;
+  return (
+    <Routes>
+      <Route
+        element={
+          <MemberAppLayout onRequireOnboarding={handleRequireOnboarding} />
+        }
+      >
+        <Route index element={<HomePage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
+    </Routes>
+  );
 }

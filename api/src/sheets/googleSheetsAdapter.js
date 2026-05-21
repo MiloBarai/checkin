@@ -133,7 +133,34 @@ export function createGoogleSheetsAdapter(config) {
               row.memberId,
               row.firstName,
               row.lastName,
-              row.optOutRanking,
+              row.optOutRanking ? 'TRUE' : 'FALSE',
+              row.createdAt,
+            ],
+          ],
+        },
+      }),
+    );
+  }
+
+  async function updateMemberRow(row) {
+    const rows = await listMemberRows();
+    const index = rows.findIndex((r) => r.memberId === row.memberId);
+    if (index === -1) {
+      throw new Error('Member not found');
+    }
+    const sheetRow = index + 2;
+    await withGoogle(() =>
+      sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${MEMBERS_TAB}!A${sheetRow}:E${sheetRow}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [
+            [
+              row.memberId,
+              row.firstName,
+              row.lastName,
+              row.optOutRanking ? 'TRUE' : 'FALSE',
               row.createdAt,
             ],
           ],
@@ -223,6 +250,7 @@ export function createGoogleSheetsAdapter(config) {
     createMembersTab,
     listMemberRows,
     appendMemberRow,
+    updateMemberRow,
     getCheckinsTabMeta,
     createCheckinsTab,
     listCheckinRows,

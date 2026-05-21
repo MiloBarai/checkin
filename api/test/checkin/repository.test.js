@@ -58,6 +58,9 @@ describe('checkin repository', () => {
     );
     assert.equal(status.checkedInToday, false);
     assert.equal(status.yearCount, 0);
+    assert.equal(status.firstName, 'Erik');
+    assert.equal(status.lastName, 'Berg');
+    assert.equal(status.optOutRanking, false);
   });
 
   it('throws when member is missing', async () => {

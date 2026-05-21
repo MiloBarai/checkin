@@ -93,6 +93,56 @@ describe('members routes', () => {
     assert.equal(res.body.error, 'member_not_found');
   });
 
+  it('PATCH /api/members/me updates opt-out only', async () => {
+    const agent = await unlockAgent(app);
+    const created = await agent
+      .post('/api/members')
+      .send({ firstName: 'Lisa', lastName: 'Holm' })
+      .expect(201);
+
+    const res = await agent
+      .patch('/api/members/me')
+      .send({ memberId: created.body.memberId, optOutRanking: true })
+      .expect(200);
+
+    assert.equal(res.body.memberId, created.body.memberId);
+    assert.equal(res.body.firstName, 'Lisa');
+    assert.equal(res.body.lastName, 'Holm');
+    assert.equal(res.body.optOutRanking, true);
+  });
+
+  it('PATCH /api/members/me updates names', async () => {
+    const agent = await unlockAgent(app);
+    const created = await agent
+      .post('/api/members')
+      .send({ firstName: 'Olof', lastName: 'Nilsson' })
+      .expect(201);
+
+    const res = await agent
+      .patch('/api/members/me')
+      .send({
+        memberId: created.body.memberId,
+        firstName: 'Olof',
+        lastName: 'Nilsson-Berg',
+      })
+      .expect(200);
+
+    assert.equal(res.body.lastName, 'Nilsson-Berg');
+    assert.equal(res.body.optOutRanking, false);
+  });
+
+  it('PATCH returns member_not_found for unknown id', async () => {
+    const agent = await unlockAgent(app);
+    const res = await agent
+      .patch('/api/members/me')
+      .send({
+        memberId: '00000000-0000-4000-8000-000000000000',
+        optOutRanking: true,
+      })
+      .expect(404);
+    assert.equal(res.body.error, 'member_not_found');
+  });
+
   it('create still requires names when memberId is absent', async () => {
     const agent = await unlockAgent(app);
     const res = await agent.post('/api/members').send({}).expect(400);

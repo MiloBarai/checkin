@@ -64,13 +64,16 @@ export function createCheckinRepository(adapter, membersRepository) {
   }
 
   async function getStatus(memberId, now = new Date()) {
-    await requireMember(memberId);
+    const member = await requireMember(memberId);
     const year = calendarYear(now);
     const today = calendarDateString(now);
     const rows = await listYearCheckins(year);
     return {
       checkedInToday: hasCheckinToday(rows, memberId, today),
       yearCount: countForMember(rows, memberId),
+      firstName: member.firstName,
+      lastName: member.lastName,
+      optOutRanking: member.optOutRanking,
     };
   }
 

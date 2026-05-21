@@ -1,5 +1,6 @@
 import { apiFetch } from './apiFetch.js';
 import { sheetsErrorMessage } from './sheetsErrors.js';
+import { syncMemberIdentityFromStatus } from '../storage/member.js';
 
 export { sheetsErrorMessage };
 
@@ -11,7 +12,15 @@ async function parseJsonResponse(res) {
 export async function getMeStatus(memberId) {
   const params = new URLSearchParams({ memberId });
   const res = await apiFetch(`/api/me/status?${params}`);
-  return parseJsonResponse(res);
+  const parsed = await parseJsonResponse(res);
+  if (parsed.ok && parsed.data.firstName && parsed.data.lastName) {
+    syncMemberIdentityFromStatus({
+      memberId,
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
+    });
+  }
+  return parsed;
 }
 
 export async function postCheckin({ memberId, firstName, lastName }) {

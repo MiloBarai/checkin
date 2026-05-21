@@ -27,6 +27,17 @@ export function createInMemorySheetsAdapter() {
       membersTab.rows.push({ ...row });
     },
 
+    async updateMemberRow(row) {
+      if (!membersTab) {
+        throw new Error('Members tab not initialized');
+      }
+      const index = membersTab.rows.findIndex((r) => r.memberId === row.memberId);
+      if (index === -1) {
+        throw new Error('Member not found');
+      }
+      membersTab.rows[index] = { ...row };
+    },
+
     async getCheckinsTabMeta(year) {
       const tab = checkinsTabs.get(year);
       if (!tab) {

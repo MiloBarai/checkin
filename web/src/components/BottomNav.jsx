@@ -1,12 +1,22 @@
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { Box, Flex, Text } from '@chakra-ui/react';
 
 const NAV_ITEMS = [
-  { id: 'home', label: 'Hem', active: true },
-  { id: 'leaderboard', label: 'Topplista', soon: true },
-  { id: 'settings', label: 'Inställningar', soon: true },
+  { id: 'home', label: 'Hem', to: '/' },
+  { id: 'leaderboard', label: 'Topplista', to: '/leaderboard', soon: true },
+  { id: 'settings', label: 'Inställningar', to: '/settings' },
 ];
 
+function isActive(pathname, to) {
+  if (to === '/') {
+    return pathname === '/';
+  }
+  return pathname.startsWith(to);
+}
+
 export default function BottomNav() {
+  const { pathname } = useLocation();
+
   return (
     <Box
       as="nav"
@@ -22,31 +32,58 @@ export default function BottomNav() {
       aria-label="Huvudnavigering"
     >
       <Flex maxW="container.sm" mx="auto">
-        {NAV_ITEMS.map((item) => (
-          <Box
-            key={item.id}
-            flex="1"
-            py={3}
-            px={2}
-            textAlign="center"
-            color={item.active ? 'teal.600' : 'gray.400'}
-            aria-current={item.active ? 'page' : undefined}
-            aria-disabled={item.soon ? true : undefined}
-          >
-            <Text
-              fontSize="sm"
-              fontWeight={item.active ? 'semibold' : 'medium'}
-              lineHeight="short"
-            >
-              {item.label}
-            </Text>
-            {item.soon ? (
-              <Text fontSize="xs" color="gray.400" mt={0.5} lineHeight="1">
-                Snart
+        {NAV_ITEMS.map((item) => {
+          const active = !item.soon && isActive(pathname, item.to);
+          const content = (
+            <>
+              <Text
+                fontSize="sm"
+                fontWeight={active ? 'semibold' : 'medium'}
+                lineHeight="short"
+              >
+                {item.label}
               </Text>
-            ) : null}
-          </Box>
-        ))}
+              {item.soon ? (
+                <Text fontSize="xs" color="gray.400" mt={0.5} lineHeight="1">
+                  Snart
+                </Text>
+              ) : null}
+            </>
+          );
+
+          if (item.soon) {
+            return (
+              <Box
+                key={item.id}
+                flex="1"
+                py={3}
+                px={2}
+                textAlign="center"
+                color="gray.400"
+                aria-disabled
+              >
+                {content}
+              </Box>
+            );
+          }
+
+          return (
+            <Box
+              key={item.id}
+              as={RouterLink}
+              to={item.to}
+              flex="1"
+              py={3}
+              px={2}
+              textAlign="center"
+              color={active ? 'teal.600' : 'gray.500'}
+              aria-current={active ? 'page' : undefined}
+              _hover={{ color: 'teal.700', textDecoration: 'none' }}
+            >
+              {content}
+            </Box>
+          );
+        })}
       </Flex>
     </Box>
   );
