@@ -1,5 +1,6 @@
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { Box, Flex, Text } from '@chakra-ui/react';
+import { BOTTOM_NAV_HEIGHT } from './layoutConstants.js';
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Hem', to: '/' },
@@ -24,6 +25,7 @@ export default function BottomNav() {
       bottom={0}
       left={0}
       right={0}
+      minH={BOTTOM_NAV_HEIGHT}
       borderTopWidth="1px"
       borderColor="gray.200"
       bg="white"
@@ -31,7 +33,7 @@ export default function BottomNav() {
       boxShadow="0 -4px 16px rgba(0, 0, 0, 0.04)"
       aria-label="Huvudnavigering"
     >
-      <Flex maxW="container.sm" mx="auto">
+      <Flex maxW="container.sm" mx="auto" minH={BOTTOM_NAV_HEIGHT} align="stretch">
         {NAV_ITEMS.map((item) => {
           const active = !item.soon && isActive(pathname, item.to);
           const content = (
@@ -56,8 +58,13 @@ export default function BottomNav() {
               <Box
                 key={item.id}
                 flex="1"
-                py={3}
+                py={4}
                 px={2}
+                minH={BOTTOM_NAV_HEIGHT}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
                 textAlign="center"
                 color="gray.400"
                 aria-disabled
@@ -73,8 +80,13 @@ export default function BottomNav() {
               as={RouterLink}
               to={item.to}
               flex="1"
-              py={3}
+              py={4}
               px={2}
+              minH={BOTTOM_NAV_HEIGHT}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
               textAlign="center"
               color={active ? 'teal.600' : 'gray.500'}
               aria-current={active ? 'page' : undefined}

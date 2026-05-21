@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Container, Flex } from '@chakra-ui/react';
 import BottomNav from './BottomNav.jsx';
+import { bottomNavOffset } from './layoutConstants.js';
 
 export default function MemberAppLayout({ onRequireOnboarding }) {
   return (
@@ -12,10 +13,13 @@ export default function MemberAppLayout({ onRequireOnboarding }) {
       <Container
         as="main"
         flex="1"
+        display="flex"
+        flexDirection="column"
+        minH={0}
         maxW="container.sm"
         px={4}
         pt="max(1.5rem, env(safe-area-inset-top))"
-        pb="6rem"
+        pb={bottomNavOffset()}
         w="full"
       >
         <Outlet context={{ onRequireOnboarding }} />

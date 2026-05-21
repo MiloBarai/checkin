@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Badge,
-  Box,
-  Flex,
   Skeleton,
   Text,
   VStack,
@@ -11,12 +8,9 @@ import { getLeaderboard } from '../api/leaderboard.js';
 import { sheetsErrorMessage } from '../api/checkin.js';
 import AppBrand from '../components/AppBrand.jsx';
 import FeedbackAlert from '../components/FeedbackAlert.jsx';
+import LeaderboardRow from '../components/LeaderboardRow.jsx';
 import ScreenCard from '../components/ScreenCard.jsx';
 import { PageStack } from '../components/PageShell.jsx';
-
-function displayName(entry) {
-  return `${entry.firstName} ${entry.lastName}`.trim();
-}
 
 export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
@@ -50,6 +44,13 @@ export default function LeaderboardPage() {
 
       <ScreenCard>
         <VStack spacing={4} align="stretch">
+          {!loading && !error && entries.length > 0 ? (
+            <Text fontSize="sm" color="gray.600" textAlign="center">
+              🥇 🥈 🥉 till de tre främsta — delad plats vid lika antal
+              träningar.
+            </Text>
+          ) : null}
+
           {loading ? (
             <>
               <Skeleton height="14" borderRadius="lg" />
@@ -80,37 +81,12 @@ export default function LeaderboardPage() {
           ) : (
             <VStack spacing={3} align="stretch" role="list">
               {entries.map((entry, index) => (
-                <Flex
+                <LeaderboardRow
                   key={`${entry.rank}-${entry.firstName}-${entry.lastName}-${index}`}
-                  role="listitem"
-                  align="center"
-                  gap={3}
-                  py={2}
-                  px={1}
-                  borderBottomWidth={
-                    index < entries.length - 1 ? '1px' : undefined
-                  }
-                  borderColor="gray.100"
-                >
-                  <Badge
-                    colorScheme="teal"
-                    fontSize="md"
-                    px={2}
-                    py={1}
-                    borderRadius="md"
-                    flexShrink={0}
-                  >
-                    #{entry.rank}
-                  </Badge>
-                  <Box flex="1" minW={0}>
-                    <Text fontWeight="semibold" noOfLines={1}>
-                      {displayName(entry)}
-                    </Text>
-                    <Text fontSize="sm" color="gray.600">
-                      {entry.yearCount} träningar
-                    </Text>
-                  </Box>
-                </Flex>
+                  entry={entry}
+                  index={index}
+                  total={entries.length}
+                />
               ))}
             </VStack>
           )}
