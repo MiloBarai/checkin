@@ -9,6 +9,8 @@ import {
 import { mapGoogleError } from './errors.js';
 import { createReadCache } from './readCache.js';
 
+const GROUPS_CACHE_TTL_MS = 15 * 60 * 1000;
+
 const CACHE_KEYS = {
   spreadsheetTitles: 'spreadsheet:titles',
   membersMeta: 'members:meta',
@@ -42,6 +44,7 @@ export function createGoogleSheetsAdapter(config) {
   const sheets = google.sheets({ version: 'v4', auth });
   const spreadsheetId = config.spreadsheetId;
   const cache = createReadCache();
+  const groupsCache = createReadCache(GROUPS_CACHE_TTL_MS);
 
   function invalidateMembersCache() {
     cache.invalidate(CACHE_KEYS.membersMeta);
@@ -49,8 +52,8 @@ export function createGoogleSheetsAdapter(config) {
   }
 
   function invalidateGroupsCache() {
-    cache.invalidate(CACHE_KEYS.groupsMeta);
-    cache.invalidate(CACHE_KEYS.groupsRows);
+    groupsCache.invalidate(CACHE_KEYS.groupsMeta);
+    groupsCache.invalidate(CACHE_KEYS.groupsRows);
   }
 
   function invalidateMemberGroupsCache() {
@@ -224,12 +227,12 @@ export function createGoogleSheetsAdapter(config) {
   }
 
   async function getGroupsTabMeta() {
-    const cached = cache.get(CACHE_KEYS.groupsMeta);
+    const cached = groupsCache.get(CACHE_KEYS.groupsMeta);
     if (cached) {
       return cached;
     }
     const meta = await getTabMeta(GROUPS_TAB);
-    cache.set(CACHE_KEYS.groupsMeta, meta);
+    groupsCache.set(CACHE_KEYS.groupsMeta, meta);
     return meta;
   }
 
@@ -239,7 +242,7 @@ export function createGoogleSheetsAdapter(config) {
   }
 
   async function listGroupRows() {
-    const cached = cache.get(CACHE_KEYS.groupsRows);
+    const cached = groupsCache.get(CACHE_KEYS.groupsRows);
     if (cached) {
       return cached;
     }
@@ -257,7 +260,7 @@ export function createGoogleSheetsAdapter(config) {
         createdAt: row[2] ?? '',
       }))
       .filter((row) => row.groupId !== '');
-    cache.set(CACHE_KEYS.groupsRows, parsed);
+    groupsCache.set(CACHE_KEYS.groupsRows, parsed);
     return parsed;
   }
 
